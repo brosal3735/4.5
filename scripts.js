@@ -1,70 +1,80 @@
 /****************************************************
  * CIS213 Unit 4, Guided Practice 3
- * Author: <Your Name Here>
- * Date:   <Date Here>
  ****************************************************/
 "use strict";
 
 function canUseSessionStorage() {
   try {
-    var testKey = "__test__";
-    sessionStorage.setItem(testKey, "1");
-    sessionStorage.removeItem(testKey);
+    var k = "__test__";
+    sessionStorage.setItem(k, "1");
+    sessionStorage.removeItem(k);
     return true;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
-function getEl(id) {
-  return document.getElementById(id);
-}
+function $(id) { return document.getElementById(id); }
 
-function processStorage() {
-  var remember = getEl("rememberinput");
-  var unameEl  = getEl("usernameinput");
-
-  if (!unameEl || !remember || !canUseSessionStorage()) return;
+function saveIfRemembered() {
+  if (!canUseSessionStorage()) return;
+  var remember = $("rememberinput");
+  var unameEl  = $("usernameinput");
+  if (!remember || !unameEl) return;
 
   if (remember.checked) {
-    sessionStorage.setItem("username", unameEl.value);
+    sessionStorage.setItem("username", unameEl.value || "");
   } else {
     sessionStorage.removeItem("username");
   }
 }
 
-function populateInfo() {
-  var unameEl = getEl("usernameinput");
-  if (!unameEl || !canUseSessionStorage()) return;
+function populateFromStorage() {
+  if (!canUseSessionStorage()) return;
+  var unameEl  = $("usernameinput");
+  var remember = $("rememberinput");
+  if (!unameEl || !remember) return;
 
   var saved = sessionStorage.getItem("username");
-  if (saved) unameEl.value = saved;
-}
-
-function handleSubmit(evt) {
-  // Save before the native form submit occurs
-  processStorage();
-  // Let the browser submit normally (no preventDefault)
-}
-
-function createEventListener() {
-  var form = document.getElementsByTagName("form")[0];
-  if (!form) return;
-
-  if (form.addEventListener) {
-    form.addEventListener("submit", handleSubmit, false);
-  } else if (form.attachEvent) {
-    form.attachEvent("onsubmit", handleSubmit);
+  if (saved !== null) {
+    unameEl.value = saved;
+    remember.checked = true;
   }
 }
 
-function setUpPage() {
-  populateInfo();
-  createEventListener();
+function handleSubmit() {
+  // Ensure latest value is saved right before submit if checked
+  saveIfRemembered();
 }
 
-if (window.addEventListener) {
-  window.addEventListener("load", setUpPage, false);
-} else if (window.attachEvent) {
-  window.attachEvent("onload", setUpPage);
+function wireEvents() {
+  var form     = document.getElementsByTagName("form")[0];
+  var unameEl  = $("usernameinput");
+  var remember = $("rememberinput");
+
+  if (form) {
+    if (form.addEventListener) form.addEventListener("submit", handleSubmit, false);
+    else form.attachEvent("onsubmit", handleSubmit);
+  }
+
+  if (remember) {
+    // Save immediately when the checkbox is toggled
+    if (remember.addEventListener) remember.addEventListener("change", saveIfRemembered, false);
+    else remember.attachEvent("onchange", saveIfRemembered);
+  }
+
+  if (unameEl) {
+    // Keep storage in sync as the user types, but only if checked
+    var onType = function () {
+      if ($("rememberinput") && $("rememberinput").checked) saveIfRemembered();
+    };
+    if (unameEl.addEventListener) unameEl.addEventListener("input", onType, false);
+    else unameEl.attachEvent("onkeyup", onType);
+  }
 }
+
+function init() {
+  populateFromStorage();
+  wireEvents();
+}
+
+if (window.addEventListener) window.addEventListener("load", init, false);
+else window.attachEvent("onload", init);
